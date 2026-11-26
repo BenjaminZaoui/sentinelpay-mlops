@@ -1,0 +1,41 @@
+# Environnement
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Données : versionnées par DVC, jamais par Git — sauf l'échantillon CI (M6)
+data/creditcard.csv
+data/prod/
+/data/**/*.csv
+!data/sample/creditcard_sample.csv
+
+# MLflow local
+mlflow.db
+mlruns/
+mlartifacts/
+
+# Exécutions locales Kubeflow
+local_outputs/
+
+# Rapports de monitoring générés
+monitoring/reports/
+
+# Système et éditeurs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Modèles entraînés localement (M2)
+artefacts/
+
+# Modèle exporté pour l'image Docker (M4)
+api/model/
+
+# Pipelines compilés : versionnés ; sorties locales : non
+pipelines/*.yaml.bak
+
+# Jeux de réentraînement (M7)
+data/retrain/

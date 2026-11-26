@@ -1,0 +1,53 @@
+# Construction et publication de l'image de l'API — SentinelPay (mission M6, workflow 3)
+# Déclenché à la main ou sur un tag v* : entraîne et enregistre un modèle sur
+# l'échantillon (MLflow local à l'exécuteur), l'exporte, construit l'image de
+# l'API et la publie dans le GitHub Container Registry (ghcr.io).
+name: Image de l'API
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+env:
+  SENTINELPAY_DATA: data/sample/creditcard_sample.csv
+  MLFLOW_DISABLE_AGENT_HINT: "1"
+  IMAGE: ghcr.io/${{ github.repository }}/api
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write                     # nécessaire pour pousser sur ghcr.io
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Installer
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+          pip freeze | grep -v "sentinelpay" > requirements.lock
+
+      - name: Entraîner, journaliser, enregistrer (MLflow local à l'exécuteur)
+        run: |
+          python -m sentinelpay.tracking
+          python -m sentinelpay.registry
+
+      - name: Porte de qualité sur le modèle promu
+        run: |
+          python -m sentinelpay.train
+          python tools/quality_gate.py
+
+      - name: Exporter le modèle @production dans l'image
+        run: mlflow artifacts download -u "models:/detection_fraude@production" -d api/model
+
+      # TODO 5 : se connecter à ghcr.io avec docker/login-action@v3
+      #          (registry: ghcr.io, username: ${{ github.actor }}, password: ${{ secrets.GITHUB_TOKEN }})
+      # TODO 6 : construire et publier avec docker/build-push-action@v6
+      #          (context: ., file: api/Dockerfile, push: true,
+      #           tags: ${{ env.IMAGE }}:${{ github.sha }} et ${{ env.IMAGE }}:latest)

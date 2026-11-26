@@ -1,0 +1,50 @@
+# Entraînement continu — SentinelPay (mission M6, workflow 2)
+# Déclenché à la main (avec un hyperparamètre), ou quand le code du modèle
+# ou le pointeur de données change sur main. Entraîne sur l'échantillon,
+# passe la porte de qualité, publie le modèle et les métriques en artefacts.
+name: Entraînement
+
+on:
+  workflow_dispatch:
+    inputs:
+      C:
+        description: "Inverse de la régularisation (régression logistique)"
+        default: "1.0"
+      seuil_recall:
+        description: "Rappel minimal exigé par la porte de qualité"
+        default: "0.75"
+  push:
+    branches: [main]
+    paths:
+      - "src/sentinelpay/**"
+      - "data/creditcard.csv.dvc"
+      - "data/sample/**"
+
+env:
+  SENTINELPAY_DATA: data/sample/creditcard_sample.csv
+  MLFLOW_DISABLE_AGENT_HINT: "1"
+
+jobs:
+  entrainer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Installer
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Entraîner
+        run: python -m sentinelpay.train --C "${{ github.event.inputs.C || '1.0' }}"
+
+      # TODO 3 : une étape "Porte de qualité" : python tools/quality_gate.py
+      #          avec --recall "${{ github.event.inputs.seuil_recall || '0.75' }}".
+      #          Si le script sort en erreur, le workflow échoue : c'est voulu.
+      # TODO 4 : une étape "Publier le modèle et les métriques" avec
+      #          actions/upload-artifact@v4 (name: modele-${{ github.sha }},
+      #          path: artefacts/modele.joblib et artefacts/metriques.json).

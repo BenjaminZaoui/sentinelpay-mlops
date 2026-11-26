@@ -1,0 +1,33 @@
+# Intégration continue — SentinelPay (mission M6, workflow 1)
+# Déclenchée à chaque pull request et à chaque push sur main :
+# installe l'environnement, vérifie que le code se compile, exécute les tests
+# de données et de modèle sur l'échantillon commité (data/sample/).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  SENTINELPAY_DATA: data/sample/creditcard_sample.csv   # pas de creditcard.csv sur l'exécuteur
+  MLFLOW_DISABLE_AGENT_HINT: "1"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip                      # le cache pip rend les exécutions suivantes bien plus rapides
+
+      # TODO 1 : une étape "Installer les dépendances" (run multi-lignes : pip install
+      #          -r requirements.txt, puis pip install -e .)
+      # TODO 2 : une étape "Tests de données et de modèle" qui exécute
+      #          python -m pytest tests/test_data.py tests/test_model.py -q
